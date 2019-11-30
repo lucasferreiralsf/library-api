@@ -11,6 +11,7 @@ export class HttpError {
 }
 
 export function errorHandler(err, req, res, next) {
+    if(err.stack) console.error(err.stack);
     err.status ? res.status(err.status) : res.status(500);
     res.json(err);
 }

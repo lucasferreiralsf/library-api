@@ -2,7 +2,10 @@ import { Schema, Document, model } from 'mongoose';
 import * as bcrypt from 'bcrypt';
 import mongoosePaginate from "mongoose-paginate-v2";
 
-export interface IUser extends Document {
+type CustomMethods = {
+  comparePassword
+}
+export interface IUser extends Document, CustomMethods {
   firstName: string;
   lastName: string;
   age: string;
@@ -11,7 +14,7 @@ export interface IUser extends Document {
   password: string;
 }
 
-const User = new Schema<IUser>({
+const User = new Schema<IUser & CustomMethods>({
   firstName: {
     type: String,
     required: true,
@@ -54,8 +57,8 @@ User.pre("save", function(this: any, next)  {
   next();
 });
 
-User.methods['comparePassword'] = function(plaintext, callback) {
-  return callback(null, bcrypt.compareSync(plaintext, this.password));
+User.methods.comparePassword = function(plaintext, callback) {
+  return bcrypt.compare(plaintext, this.password);
 };
 
 User.plugin(mongoosePaginate);
