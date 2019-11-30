@@ -1,72 +1,95 @@
 import "reflect-metadata";
-import * as express from "express";
-import * as bodyParser from "body-parser";
-import * as dotenv from "dotenv";
-import * as path from "path";
+import express from "express";
+import bodyParser from "body-parser";
+import dotenv from "dotenv";
+import path from "path";
 import { Request, Response } from "express";
-import * as mongoose from 'mongoose';
+import mongoose from "mongoose";
 import { Routes } from "./routes";
+import { errorHandler } from "./common/errors";
 
-dotenv.config({path: path.resolve(__dirname)});
+// dotenv.config({path: path.resolve(__dirname)});
+async function config() {
+  await dotenv.config();
+  mongoose
+    .connect(process.env.DATABASE_URL, {
+      useNewUrlParser: true,
+      useUnifiedTopology: true
+    })
+    .then(async db => {
+      // create express app
+      const app = express();
 
-mongoose.connect(process.env.DATABASE_URL, {useNewUrlParser: true}).then(async db => {
-    // create express app
-    const app = express();
-    app.use(bodyParser.json());
-
-    // register express routes from defined application routes
-    Routes.forEach(route => {
-      (app as any)[route.method](
-        route.route,
-        (req: Request, res: Response, next: Function) => {
-          const result = new (route.controller as any)()[route.action](
-            req,
-            res,
-            next
-          );
-          if (result instanceof Promise) {
-            result.then(result =>
-              result !== null && result !== undefined
-                ? res.send(result)
-                : undefined
-            );
-          } else if (result !== null && result !== undefined) {
-            res.json(result);
-          }
-        }
+      app.use(
+        bodyParser.urlencoded({
+          extended: true
+        })
       );
-    });
+      app.use(bodyParser.json());
+      // app.use(methodOverride());
+      
+      // register express routes from defined application routes
+      Routes.forEach(route => {
+        (app as any)[route.method](
+          route.route,
+          (req: Request, res: Response, next: Function) => {
+            try {
+              const result = new (route.controller as any)()[route.action](
+                req,
+                res,
+                next
+                );
+                if (result instanceof Promise) {
+                  result.then(result =>
+                    result !== null && result !== undefined
+                    ? res.send(result)
+                    : undefined
+                    );
+                  } else if (result !== null && result !== undefined) {
+                    res.json(result);
+                  }
+                } catch (error) {
+                  res.status(error.status).json(error.message);
+                }
+              }
+              );
+            });
+            
+            // setup express app here
+            // ...
+            
+            // start express server
+            app.use(errorHandler);
+            app.listen(process.env.PORT || 3000);
+            
+            // insert new users for test
+            // await connection.manager.save(
+              //   connection.manager.create(User, {
+                //     firstName: "Timber",
+                //     lastName: "Saw",
+                //     age: 27,
+                //     phone: "34991218200",
+      //     email: "lucasferreiracn@gmail.com",
+      //     password: "12345"
+      //   })
+      // );
+      // await connection.manager.save(
+      //   connection.manager.create(User, {
+      //     firstName: "Phantom",
+      //     lastName: "Assassin",
+      //     age: 24,
+      //     phone: "12345666",
+      //     email: "teste@teste.com",
+      //     password: "12345"
+      //   })
+      // );
 
-    // setup express app here
-    // ...
+      console.log(
+        `Library API server has started on http://localhost:${process.env
+          .PORT || 3000}/`
+      );
+    })
+    .catch(error => console.log(error));
+}
 
-    // start express server
-    app.listen(3000);
-
-    // insert new users for test
-    // await connection.manager.save(
-    //   connection.manager.create(User, {
-    //     firstName: "Timber",
-    //     lastName: "Saw",
-    //     age: 27,
-    //     phone: "34991218200",
-    //     email: "lucasferreiracn@gmail.com",
-    //     password: "12345"
-    //   })
-    // );
-    // await connection.manager.save(
-    //   connection.manager.create(User, {
-    //     firstName: "Phantom",
-    //     lastName: "Assassin",
-    //     age: 24,
-    //     phone: "12345666",
-    //     email: "teste@teste.com",
-    //     password: "12345"
-    //   })
-    // );
-
-    console.log(
-      "Express server has started on port 3000. Open http://localhost:3000/users to see results"
-    );
-  })
-  .catch(error => console.log(error));
+config();
