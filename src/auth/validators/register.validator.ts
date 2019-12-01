@@ -14,13 +14,13 @@ export const registerValidator = [
   check(["phone"])
     .isMobilePhone("pt-BR")
     .custom(async phone => {
-      const user = await userSchema.find({ phone });
-      if (user) throw new HttpError("E-mail already in use", 400);
+      const user = await userSchema.findOne({ phone });
+      if (user) throw new HttpError("Phone already in use", 400);
     }),
   check(["email"])
     .isEmail()
     .custom(async email => {
-      const user = await userSchema.find({ email });
+      const user = await userSchema.findOne({ email });
       if (user) throw new HttpError("E-mail already in use", 400);
     }),
   check(["age"]).isInt(),

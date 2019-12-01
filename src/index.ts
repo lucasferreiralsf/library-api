@@ -17,7 +17,8 @@ async function config() {
   mongoose
     .connect(configuration.databaseUrl, {
       useNewUrlParser: true,
-      useUnifiedTopology: true
+      useUnifiedTopology: true,
+      useFindAndModify: false
     })
     .then(async db => {
       // create express app
@@ -30,30 +31,10 @@ async function config() {
           extended: true
         })
       );
-      app.use(bodyParser.json());    
+      app.use(bodyParser.json());
       passportStrategy(passport);
       app.use(passport.initialize());
 
-      const call = (req: Request, res: Response, next: Function, route?) => {
-        try {
-          const result = new (route.controller as any)()[route.action](
-            req,
-            res,
-            next
-          );
-          // if (result instanceof Promise) {
-          //   result.then(result =>
-          //     result !== null && result !== undefined
-          //     ? res.send(result)
-          //     : undefined
-          //     );
-          //   } else if (result !== null && result !== undefined) {
-          //     res.json(result);
-          //   }
-        } catch (error) {
-          res.status(error.status).json(error.message);
-        }
-      };
       // register express routes from defined application routes
       Routes.forEach(route => {
         (app as any)[route.method](
@@ -92,27 +73,13 @@ async function config() {
       app.use(errorHandler);
       app.listen(process.env.PORT || 3000);
 
-      // insert new users for test
-      // await connection.manager.save(
-      //   connection.manager.create(User, {
-      //     firstName: "Timber",
-      //     lastName: "Saw",
-      //     age: 27,
-      //     phone: "34991218200",
-      //     email: "lucasferreiracn@gmail.com",
-      //     password: "12345"
-      //   })
-      // );
-      // await connection.manager.save(
-      //   connection.manager.create(User, {
-      //     firstName: "Phantom",
-      //     lastName: "Assassin",
-      //     age: 24,
-      //     phone: "12345666",
-      //     email: "teste@teste.com",
-      //     password: "12345"
-      //   })
-      // );
+      await db.connection
+        .model("Category")
+        .updateOne(
+          { title: "Other" },
+          { title: "Other", description: "Other category." },
+          { upsert: true }
+        );
 
       console.log(
         `Library API server has started on http://localhost:${process.env

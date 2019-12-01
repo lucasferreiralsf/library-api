@@ -1,17 +1,18 @@
 import { Strategy as JwtStrategy, ExtractJwt } from "passport-jwt";
 import User from "../user/user.schema";
 
-export default (passport) => {
+export default passport => {
   passport.use(
     "token",
     new JwtStrategy(
       {
         secretOrKey: process.env.SECRET_KEY,
-        jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken()
+        jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
+        passReqToCallback: true
       },
-      (payload, cb) => {
+      async (req, payload, cb) => {
         try {
-          const user = User.findById(payload.email);
+          const user = await User.findOne({ email: payload.email });
           if (!user) {
             cb(null, false);
           }
