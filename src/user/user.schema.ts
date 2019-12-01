@@ -1,17 +1,22 @@
 import { Schema, Document, model } from 'mongoose';
 import * as bcrypt from 'bcrypt';
 import mongoosePaginate from "mongoose-paginate-v2";
+import bookSchema, { IBook } from '../book/book.schema';
 
-export interface IUser extends Document {
+type CustomMethods = {
+  comparePassword
+}
+export interface IUser extends Document, CustomMethods {
   firstName: string;
   lastName: string;
   age: string;
   phone: string;
   email: string;
   password: string;
+  favoriteBooks?: string[];
 }
 
-const User = new Schema<IUser>({
+const User = new Schema<IUser & CustomMethods>({
   firstName: {
     type: String,
     required: true,
@@ -44,7 +49,12 @@ const User = new Schema<IUser>({
     required: true,
   },
 
-}, { timestamps: true});
+  favoriteBooks: [{
+    type: Schema.Types.ObjectId,
+    ref: 'Book'
+  }]
+
+}, { timestamps: true, toJSON: { virtuals: true }});
 
 User.pre("save", function(this: any, next)  {
   if(!this.isModified("password")) {
@@ -54,8 +64,19 @@ User.pre("save", function(this: any, next)  {
   next();
 });
 
-User.methods['comparePassword'] = function(plaintext, callback) {
-  return callback(null, bcrypt.compareSync(plaintext, this.password));
+User.pre("remove", function(next) {
+  bookSchema
+    .update(
+      { usersFavorites: this._id },
+      { $pull: { usersFavorites: this._id } },
+      { multi: true }
+    ) //if reference exists in multiple documents
+    .exec();
+  next();
+});
+
+User.methods.comparePassword = function(plaintext, callback) {
+  return bcrypt.compare(plaintext, this.password);
 };
 
 User.plugin(mongoosePaginate);
