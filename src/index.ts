@@ -71,7 +71,7 @@ async function config() {
 
       // start express server
       app.use(errorHandler);
-      app.listen(process.env.PORT || 3000);
+      app.listen(configuration.port || 3000);
 
       await db.connection
         .model("Category")
@@ -82,8 +82,7 @@ async function config() {
         );
 
       console.log(
-        `Library API server has started on http://localhost:${process.env
-          .PORT || 3000}/`
+        `Library API server has started on http://localhost:${configuration.port || 3000}/`
       );
     })
     .catch(error => console.log(error));
